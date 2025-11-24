@@ -4,6 +4,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
 import { storage, BahanBaku, TransaksiPenerimaan, TransaksiPengeluaran } from '../lib/storage';
+import { calculateROP, calculateEOQ } from '../lib/calculations';
+
+// Fungsi untuk menentukan status stok
+const getStokStatus = (stok: number, rop: number, eoq: number) => {
+  if (stok === 0) {
+    return { text: 'Stok Habis', color: 'text-red-700 bg-red-100 px-2 py-1 rounded' };
+  } else if (stok < rop) {
+    return { text: 'Perlu Order Segera', color: 'text-red-600 bg-red-50 px-2 py-1 rounded' };
+  } else if (stok < eoq) {
+    return { text: 'Aman', color: 'text-green-600 bg-green-50 px-2 py-1 rounded' };
+  } else {
+    return { text: 'Optimal', color: 'text-blue-600 bg-blue-50 px-2 py-1 rounded' };
+  }
+};
 
 export default function Laporan() {
   const [bahanBaku, setBahanBaku] = useState<BahanBaku[]>([]);
@@ -101,25 +115,26 @@ export default function Laporan() {
                     </tr>
                   </thead>
                   <tbody>
-                    {bahanBaku.map(item => (
-                      <tr key={item.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3">{item.kode}</td>
-                        <td className="p-3">{item.nama}</td>
-                        <td className="p-3">{item.stokAwal}</td>
-                        <td className="p-3">{item.stokSaatIni}</td>
-                        <td className="p-3">{item.satuan}</td>
-                        <td className="p-3">Rp {item.hargaSatuan.toLocaleString('id-ID')}</td>
-                        <td className="p-3">Rp {(item.stokSaatIni * item.hargaSatuan).toLocaleString('id-ID')}</td>
-                        <td className="p-3">{item.rop}</td>
-                        <td className="p-3">
-                          {item.stokSaatIni <= item.rop ? (
-                            <span className="text-red-600">Perlu Order</span>
-                          ) : (
-                            <span className="text-green-600">Aman</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {bahanBaku.map(item => {
+                      const rop = calculateROP(item.id, penerimaan, pengeluaran);
+                      const eoq = calculateEOQ(item, pengeluaran);
+                      const status = getStokStatus(item.stokSaatIni, rop, eoq);
+                      return (
+                        <tr key={item.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3">{item.kode}</td>
+                          <td className="p-3">{item.nama}</td>
+                          <td className="p-3">0</td>
+                          <td className="p-3">{item.stokSaatIni}</td>
+                          <td className="p-3">{item.satuan}</td>
+                          <td className="p-3">Rp {item.hargaSatuan.toLocaleString('id-ID')}</td>
+                          <td className="p-3">Rp {(item.stokSaatIni * item.hargaSatuan).toLocaleString('id-ID')}</td>
+                          <td className="p-3">{rop}</td>
+                          <td className="p-3">
+                            <span className={status.color}>{status.text}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2">
