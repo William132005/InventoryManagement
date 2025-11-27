@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Database, Package, ArrowLeftRight, Calculator, FileText, Home, LogOut, User } from 'lucide-react';
+import { Database, Package, ArrowLeftRight, Calculator, FileText, Home, LogOut, User, DollarSign } from 'lucide-react';
 import { Button } from './components/ui/button';
 import Dashboard from './components/Dashboard';
 import DataBahanBaku from './components/DataBahanBaku';
 import TransaksiPersediaan from './components/TransaksiPersediaan';
+import BiayaPenyimpanan from './components/BiayaPenyimpanan';
 import PerhitunganPersediaan from './components/PerhitunganPersediaan';
 import Laporan from './components/Laporan';
 import Login from './components/Login';
 import { auth, ROLE_LABELS, PERMISSIONS } from './lib/auth';
 import type { User as UserType } from './lib/auth';
 
-type Page = 'dashboard' | 'data-bahan-baku' | 'transaksi' | 'perhitungan' | 'laporan';
+type Page = 'dashboard' | 'data-bahan-baku' | 'transaksi' | 'biaya-penyimpanan' | 'perhitungan' | 'laporan';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
@@ -41,6 +42,8 @@ export default function App() {
         return permissions.dataBahanBaku;
       case 'transaksi':
         return permissions.transaksiPenerimaan || permissions.transaksiPengeluaran;
+      case 'biaya-penyimpanan':
+        return permissions.biayaPenyimpanan;
       case 'perhitungan':
         return permissions.perhitungan;
       case 'laporan':
@@ -118,6 +121,20 @@ export default function App() {
             </button>
           )}
 
+          {canAccess('biaya-penyimpanan') && (
+            <button
+              onClick={() => setCurrentPage('biaya-penyimpanan')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                currentPage === 'biaya-penyimpanan'
+                  ? 'bg-purple-50 text-purple-600'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <DollarSign className="w-5 h-5" />
+              <span>Biaya Penyimpanan</span>
+            </button>
+          )}
+
           {canAccess('perhitungan') && (
             <button
               onClick={() => setCurrentPage('perhitungan')}
@@ -164,6 +181,7 @@ export default function App() {
         {currentPage === 'dashboard' && <Dashboard currentUser={currentUser} />}
         {currentPage === 'data-bahan-baku' && <DataBahanBaku currentUser={currentUser} />}
         {currentPage === 'transaksi' && <TransaksiPersediaan currentUser={currentUser} />}
+        {currentPage === 'biaya-penyimpanan' && <BiayaPenyimpanan currentUser={currentUser} />}
         {currentPage === 'perhitungan' && <PerhitunganPersediaan />}
         {currentPage === 'laporan' && <Laporan />}
       </main>

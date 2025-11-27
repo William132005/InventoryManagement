@@ -24,9 +24,10 @@ export default function PerhitunganPersediaan() {
     if (selectedBahan) {
       const penerimaan = storage.getPenerimaan();
       const pengeluaran = storage.getPengeluaran();
+      const biayaPenyimpanan = storage.getBiayaPenyimpanan();
       
-      // Calculate EOQ
-      const eoqValue = calculateEOQ(selectedBahan, pengeluaran);
+      // Calculate EOQ (with new parameters)
+      const eoqValue = calculateEOQ(selectedBahan, pengeluaran, penerimaan, biayaPenyimpanan);
       setEoq(eoqValue);
       
       // Calculate ROP
@@ -131,16 +132,27 @@ export default function PerhitunganPersediaan() {
                   <div className="pt-4 border-t space-y-3">
                     <h4 className="text-gray-900">Rumus:</h4>
                     <div className="p-3 bg-gray-50 rounded">
-                      <p className="text-gray-900">ROP = Permintaan Harian Rata-rata × Lead Time</p>
+                      <p className="text-gray-900">ROP = d × L</p>
+                      <p className="text-gray-600 mt-2">Dimana:</p>
+                      <p className="text-gray-600">d = Permintaan harian rata-rata</p>
+                      <p className="text-gray-600">L = Lead Time (waktu tunggu)</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t space-y-2">
+                    <h4 className="text-gray-900">Nilai Parameter:</h4>
+                    <div className="p-3 bg-blue-50 rounded space-y-1">
+                      <p className="text-gray-700"><span className="text-gray-900">d</span> = {stats.avgDailyDemand} {selectedBahan.satuan}/hari (permintaan harian rata-rata)</p>
+                      <p className="text-gray-700"><span className="text-gray-900">L</span> = {stats.avgLeadTime} hari (lead time rata-rata)</p>
                     </div>
                   </div>
 
                   <div className="pt-4 border-t space-y-2">
                     <h4 className="text-gray-900">Perhitungan:</h4>
                     <div className="space-y-1">
-                      <p className="text-gray-600">Permintaan Harian = {stats.avgDailyDemand} {selectedBahan.satuan}/hari</p>
-                      <p className="text-gray-600">Lead Time = {stats.avgLeadTime} hari</p>
-                      <p className="text-gray-900 mt-2">ROP = {stats.avgDailyDemand} × {stats.avgLeadTime} = {rop} {selectedBahan.satuan}</p>
+                      <p className="text-gray-600">ROP = d × L</p>
+                      <p className="text-gray-600">ROP = {stats.avgDailyDemand} × {stats.avgLeadTime}</p>
+                      <p className="text-gray-900 text-lg mt-2">ROP = <span className="font-bold">{rop} {selectedBahan.satuan}</span></p>
                     </div>
                   </div>
 
@@ -171,20 +183,94 @@ export default function PerhitunganPersediaan() {
                   <div className="pt-4 border-t space-y-3">
                     <h4 className="text-gray-900">Rumus:</h4>
                     <div className="p-3 bg-gray-50 rounded">
-                      <p className="text-gray-900">EOQ = √((2 × D × S) / H)</p>
-                      <p className="text-gray-600 mt-1">D = Demand per tahun</p>
-                      <p className="text-gray-600">S = Biaya pemesanan</p>
-                      <p className="text-gray-600">H = Biaya penyimpanan per unit/tahun</p>
+                      <p className="text-gray-900 text-lg">EOQ = √((2 × D × S) / H)</p>
+                      <p className="text-gray-600 mt-2">Dimana:</p>
+                      <p className="text-gray-600">D = Demand (permintaan) per tahun</p>
+                      <p className="text-gray-600">S = Biaya pemesanan (ordering cost)</p>
+                      <p className="text-gray-600">H = Biaya penyimpanan per unit per tahun (holding cost)</p>
                     </div>
+                  </div>
+
+                  <div className="pt-4 border-t space-y-2">
+                    <h4 className="text-gray-900">Nilai Parameter:</h4>
+                    {(() => {
+                      const penerimaan = storage.getPenerimaan();
+                      const biayaPenyimpanan = storage.getBiayaPenyimpanan();
+                      const annualDemand = parseFloat(stats.avgDailyDemand) * 365;
+                      
+                      const lastPenerimaan = penerimaan
+                        .filter((p: any) => p.bahanBakuId === selectedBahan.id)
+                        .sort((a: any, b: any) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())[0];
+                      
+                      const latestBiayaPenyimpanan = biayaPenyimpanan
+                        .filter((bp: any) => bp.bahanBakuId === selectedBahan.id)
+                        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                      
+                      return (
+                        <div className="p-3 bg-purple-50 rounded space-y-1">
+                          <p className="text-gray-700"><span className="text-gray-900 font-semibold">D</span> = {annualDemand.toFixed(2)} {selectedBahan.satuan}/tahun (demand tahunan)</p>
+                          <p className="text-gray-600 text-sm ml-4">→ Dihitung dari: {stats.avgDailyDemand} {selectedBahan.satuan}/hari × 365 hari</p>
+                          
+                          {lastPenerimaan ? (
+                            <>
+                              <p className="text-gray-700 mt-2"><span className="text-gray-900 font-semibold">S</span> = Rp {lastPenerimaan.biayaPemesanan.toLocaleString('id-ID')} (biaya pemesanan)</p>
+                              <p className="text-gray-600 text-sm ml-4">→ Dari transaksi penerimaan terakhir</p>
+                            </>
+                          ) : (
+                            <p className="text-orange-600 mt-2">⚠️ Belum ada data transaksi penerimaan</p>
+                          )}
+                          
+                          {latestBiayaPenyimpanan ? (
+                            <>
+                              <p className="text-gray-700 mt-2"><span className="text-gray-900 font-semibold">H</span> = Rp {latestBiayaPenyimpanan.biayaPerUnit.toLocaleString('id-ID')}/unit/tahun (biaya penyimpanan)</p>
+                              <p className="text-gray-600 text-sm ml-4">→ Dari modul biaya penyimpanan</p>
+                            </>
+                          ) : (
+                            <p className="text-orange-600 mt-2">⚠️ Belum ada data biaya penyimpanan</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="pt-4 border-t space-y-2">
                     <h4 className="text-gray-900">Perhitungan:</h4>
                     <div className="space-y-1">
-                      <p className="text-gray-600">Demand tahunan = {stats.avgDailyDemand} × 365 = {(parseFloat(stats.avgDailyDemand) * 365).toFixed(0)} {selectedBahan.satuan}</p>
-                      <p className="text-gray-600">Biaya pemesanan = Rp {selectedBahan.biayaPemesanan.toLocaleString('id-ID')}</p>
-                      <p className="text-gray-600">Biaya penyimpanan = Rp {selectedBahan.biayaPenyimpanan.toLocaleString('id-ID')}/unit</p>
-                      <p className="text-gray-900 mt-2">EOQ = {eoq} {selectedBahan.satuan}</p>
+                      {(() => {
+                        const penerimaan = storage.getPenerimaan();
+                        const biayaPenyimpanan = storage.getBiayaPenyimpanan();
+                        const annualDemand = parseFloat(stats.avgDailyDemand) * 365;
+                        
+                        const lastPenerimaan = penerimaan
+                          .filter((p: any) => p.bahanBakuId === selectedBahan.id)
+                          .sort((a: any, b: any) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())[0];
+                        
+                        const latestBiayaPenyimpanan = biayaPenyimpanan
+                          .filter((bp: any) => bp.bahanBakuId === selectedBahan.id)
+                          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                        
+                        if (lastPenerimaan && latestBiayaPenyimpanan) {
+                          const D = annualDemand;
+                          const S = lastPenerimaan.biayaPemesanan;
+                          const H = latestBiayaPenyimpanan.biayaPerUnit;
+                          const numerator = 2 * D * S;
+                          const beforeSqrt = numerator / H;
+                          
+                          return (
+                            <>
+                              <p className="text-gray-600">EOQ = √((2 × D × S) / H)</p>
+                              <p className="text-gray-600">EOQ = √((2 × {annualDemand.toFixed(2)} × {S.toLocaleString('id-ID')}) / {H.toLocaleString('id-ID')})</p>
+                              <p className="text-gray-600">EOQ = √({numerator.toLocaleString('id-ID')} / {H.toLocaleString('id-ID')})</p>
+                              <p className="text-gray-600">EOQ = √{beforeSqrt.toLocaleString('id-ID', {maximumFractionDigits: 2})}</p>
+                              <p className="text-gray-900 text-lg mt-2">EOQ = <span className="font-bold">{eoq} {selectedBahan.satuan}</span></p>
+                            </>
+                          );
+                        } else {
+                          return (
+                            <p className="text-orange-600">⚠️ Belum ada data biaya pemesanan atau biaya penyimpanan untuk perhitungan EOQ</p>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
 

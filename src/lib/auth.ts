@@ -69,30 +69,33 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 // Permissions untuk setiap role
 export const PERMISSIONS = {
-  // Owner bisa akses semua
+  // Owner hanya bisa lihat dashboard, perhitungan EOQ/ROP, dan laporan
   owner: {
     dashboard: true,
-    dataBahanBaku: true,
-    transaksiPenerimaan: true,
-    transaksiPengeluaran: true,
+    dataBahanBaku: false,
+    transaksiPenerimaan: false,
+    transaksiPengeluaran: false,
+    biayaPenyimpanan: false,
     perhitungan: true,
     laporan: true,
   },
-  // Admin Gudang bisa kelola data dan transaksi
+  // Admin Gudang bisa kelola semua data dan transaksi
   'admin-gudang': {
     dashboard: true,
     dataBahanBaku: true,
     transaksiPenerimaan: true,
     transaksiPengeluaran: true,
+    biayaPenyimpanan: true,
     perhitungan: true,
     laporan: true,
   },
-  // Staff Produksi hanya bisa input pengeluaran dan lihat stok
+  // Staff Produksi bisa lihat dashboard dan input transaksi (penerimaan & pengeluaran)
   'staff-produksi': {
     dashboard: true,
-    dataBahanBaku: false, // Hanya lihat, tidak edit
-    transaksiPenerimaan: false,
-    transaksiPengeluaran: true, // Hanya bisa input pengeluaran untuk produksi
+    dataBahanBaku: false,
+    transaksiPenerimaan: true,
+    transaksiPengeluaran: true,
+    biayaPenyimpanan: false,
     perhitungan: false,
     laporan: false,
   },
